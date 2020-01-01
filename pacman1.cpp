@@ -3,6 +3,8 @@
 
 #include "stdafx.h"
 #include "pacman1.h"
+#include "GMap.h"
+#include <memory>
 using namespace std;
 #define WLENTH 700		// 高
 #define WHIGHT 740		// 宽
@@ -47,15 +49,29 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     MSG msg;
 
-    // 主消息循环:
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
+	int s_n = 2; //[0,1,2]
+	GMap *MapArray[STAGE_COUNT] = { new Stage_1(), new Stage_2(), new Stage_3() };
+	bool bRunning = true;
+	while(bRunning && s_n < STAGE_COUNT)
+	{
+		//获取消息
+		if(PeekMessage(&msg, NULL, 0,0,PM_REMOVE))
+		{
+			if(msg.message == WM_QUIT)
+			{
+				break;
+			}
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		HDC hdc = ::GetDC(g_hwnd);
+		{
+			MapArray[s_n]->DrawPeas(hdc);
+			MapArray[s_n]->DrawMap(hdc);
+		}
+		::ReleaseDC(g_hwnd, hdc);
+	}
+	
 
     return (int) msg.wParam;
 }
