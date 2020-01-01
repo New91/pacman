@@ -3,6 +3,11 @@
 
 #include "stdafx.h"
 #include "pacman1.h"
+using namespace std;
+#define WLENTH 700		// 高
+#define WHIGHT 740		// 宽
+#define STAGE_COUNT 3	// 一共三关
+static HWND g_hwnd;		// 游戏窗口句柄
 
 #define MAX_LOADSTRING 100
 
@@ -98,13 +103,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // 将实例句柄存储在全局变量中
 
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+      0,
+	   0,
+	   WLENTH,
+	   WHIGHT,
+	   nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
       return FALSE;
    }
-
+   g_hwnd = hWnd;
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
