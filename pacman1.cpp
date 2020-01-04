@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "pacman1.h"
 #include "GMap.h"
+#include "GObject.h"
 #include <memory>
 using namespace std;
 #define WLENTH 700		// 高
@@ -47,32 +48,134 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_PACMAN1));
 
-    MSG msg;
-
 	int s_n = 2; //[0,1,2]
 	GMap *MapArray[STAGE_COUNT] = { new Stage_1(), new Stage_2(), new Stage_3() };
-	bool bRunning = true;
-	while(bRunning && s_n < STAGE_COUNT)
+	// 玩家对象
+	// 自己
+	auto g_me = std::make_shared<PacMan>(P_ROW, P_ARRAY);
+	auto e1 = std::make_shared<RedOne>(E_ROW, E_ARRAY);
+	auto e2 = std::make_shared<RedOne>(E_ROW, E_ARRAY);
+	auto e3 = std::make_shared<BlueOne>(E_ROW, E_ARRAY);
+	auto e4 = std::make_shared<YellowOne>(E_ROW, E_ARRAY);
+	// 关卡
+	GObject::pStage = MapArray[s_n];
+	// 设定玩家
+	Enermy::player = g_me;
+	MSG msg;
+	DWORD dwLastTime = 0;
+
+	
+	while(!g_me->IsOver() && s_n < STAGE_COUNT)
 	{
-		//获取消息
-		if(PeekMessage(&msg, NULL, 0,0,PM_REMOVE))
+		if(g_me->IsWin())
 		{
-			if(msg.message == WM_QUIT)
+			s_n++;
+			g_me->SetPosition(P_ROW, P_ARRAY);
+			e1->SetPosition(E_ROW, E_ARRAY);
+			e2->SetPosition(E_ROW, E_ARRAY);
+			e3->SetPosition(E_ROW, E_ARRAY);
+			e4->SetPosition(E_ROW, E_ARRAY);
+			if(s_n < 3)
+			{
+				MessageBox(g_hwnd, _T("恭喜过关"), _T("吃豆子提示"), MB_OK);
+				GObject::pStage = MapArray[s_n];
+				RECT screenRect;
+				screenRect.top = 0;
+				screenRect.left = 0;
+				screenRect.right = WLENTH;
+				screenRect.bottom = WHIGHT;
+
+				HDC hdc = GetDC(g_hwnd);
+				std::shared_ptr<HDC__> dc(hdc, [](HDC hdc)
+				{
+					::ReleaseDC(g_hwnd, hdc);
+				});
+				::FillRect(dc.get(), &screenRect, CreateSolidBrush(RGB(255, 255, 255)));
+				GObject::pStage->DrawMap(hdc);
+				continue;
+			}else
 			{
 				break;
 			}
+		}
+		//获取消息
+		if(PeekMessage(&msg, NULL, 0,0,PM_REMOVE))
+		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		HDC hdc = ::GetDC(g_hwnd);
+
+		if(GetTickCount() - dwLastTime >= 100)
 		{
-			MapArray[s_n]->DrawPeas(hdc);
-			MapArray[s_n]->DrawMap(hdc);
+			dwLastTime = GetTickCount();
+		}else
+		{
+			continue;
 		}
-		::ReleaseDC(g_hwnd, hdc);
+
+		{
+			// 获得设备
+			HDC hdc = ::GetDC(g_hwnd);
+			// 不使用时自动释放
+			std::shared_ptr<HDC__> dc(hdc, [](auto hdc) {
+				::ReleaseDC(g_hwnd, hdc);
+			});
+			// 画豆子
+			MapArray[s_n]->DrawPeas(hdc);
+			// 画地图
+			MapArray[s_n]->DrawMap(hdc);
+
+			// 画敌人及自动运动
+			{
+				e1->action();
+				e1->DrawBlank(hdc);
+				e1->Draw(hdc);
+
+				e2->action();
+				e2->DrawBlank(hdc);
+				e2->Draw(hdc);
+
+				e3->action();
+				e3->DrawBlank(hdc);
+				e3->Draw(hdc);
+
+				e4->action();
+				e4->DrawBlank(hdc);
+				e4->Draw(hdc);
+			}
+
+			{
+				// 画自己
+				g_me->DrawBlank(hdc);
+				g_me->Draw(hdc);
+				// 自己向前移动
+				g_me->action();
+
+				// 获取按键 : 控制自己的方向
+				if (GetAsyncKeyState(VK_DOWN) & 0x8000) {
+					g_me->SetTwCommand(DOWN);
+				}
+				if (GetAsyncKeyState(VK_LEFT) & 0x8000) {
+					g_me->SetTwCommand(LEFT);
+				}
+				if (GetAsyncKeyState(VK_RIGHT) & 0x8000) {
+					g_me->SetTwCommand(RIGHT);
+				}
+				if (GetAsyncKeyState(VK_UP) & 0x8000) {
+					g_me->SetTwCommand(UP);
+				}
+			}
+		}
 	}
 	
-
+	// 如果游戏结束
+	if (g_me->IsOver()) {
+		MessageBoxA(NULL, "出师未捷", "吃豆子提示", MB_OK);
+	}
+	// 否则,提示赢得游戏
+	else {
+		MessageBoxA(NULL, "恭喜您赢得了胜利\r\n确定后游戏退出", "吃豆子提示", MB_OK);
+	}
     return (int) msg.wParam;
 }
 
